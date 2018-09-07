@@ -19,3 +19,4 @@ for(j in 1:3){
 mat1
 
 mat2
+mat1*mat2
