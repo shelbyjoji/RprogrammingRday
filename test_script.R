@@ -205,7 +205,9 @@ residuals(model, type="deviance") # residuals
 #***************************************
 model<-glm(heart_disease_present ~exercise_induced_angina+chest_pain_type+num_major_vessels+oldpeak_eq_st_depression+sex,family = binomial(link = 'logit'), data=train)
 summary(model)
-# fitted.results <- predict(model,newdata=subset(d3,select=c(...columns...)),type='response')
-# fitted.results <- ifelse(fitted.results > 0.5,1,0)
-# misClasificError <- mean(fitted.results != test$Survived)
-# print(paste('Accuracy',1-misClasificError))
+fitted.results <- predict(model,newdata=subset(d3,select=c('exercise_induced_angina','chest_pain_type','num_major_vessels','oldpeak_eq_st_depression','sex')),type='response')
+fitted.results
+fitted.results <- ifelse(fitted.results > 0.5,1,0)
+fitted.results
+
+ 
