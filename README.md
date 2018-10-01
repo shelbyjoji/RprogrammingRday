@@ -28,3 +28,8 @@ age (type: int): age in years
 max_heart_rate_achieved (type: int): maximum heart rate achieved (beats per minute)
 
 exercise_induced_angina (type: binary): exercise-induced chest pain (0: False, 1: True)
+
+We have two datasets train and test data
+The training set should be used to build your models. For the training set, we provide the outcome (also known as the “ground truth”) for each patient. Your model will be based on “features” like chest pain type, sex and age. 
+
+The test set should be used to see how well your model performs on unseen data. For the test set, ground truth is not provided for each patient. We need to predict these outcomes. For each patient in the test set, use the model we trained to predict whether or not they have heart disease.
