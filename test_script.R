@@ -12,6 +12,10 @@ str(train)
 summary(train)
 
 
+#OBJECTIVE
+#Predict whether patient have heart disease or not
+
+
 #_______________________________
 #Categorical
 #_______________________________
@@ -97,4 +101,29 @@ ggplot(train, aes(resting_blood_pressure, fill = factor(heart_disease_present)))
 #... more exploratory analysis required
 
 
+#********************************************************************************************
+#Check for missing values      DONE
+#********************************************************************************************
 
+sapply(train, function(x) sum(is.na(x)))
+
+sapply(train, function(x) length(unique(x)))#unique values for all columns in dataset
+
+library(Amelia)
+missmap(train, main="Missing values vs observed")
+
+
+#********************************************************************************************
+#Model fitting    DONE
+#********************************************************************************************
+train <- subset( train, select = -patient_id )
+
+model<-glm(heart_disease_present ~., family = binomial(link = 'logit'), data=train)
+summary(model)
+
+
+confint(model)
+exp(coef(model)) # exponentiated coefficients
+exp(confint(model)) # 95% CI for exponentiated coefficients
+predict(model, type="response") # predicted values
+residuals(model, type="deviance") # residuals
