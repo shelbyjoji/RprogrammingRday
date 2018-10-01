@@ -137,6 +137,7 @@ names(train)
 model<-glm(heart_disease_present ~exercise_induced_angina+chest_pain_type+num_major_vessels+oldpeak_eq_st_depression+sex+thalach,family = binomial(link = 'logit'), data=train)
 summary(model)
 
+
 #for all the above statistically significant variables, num_major_vessels has the lowest p-value suggesting 
 #a strong association of the num_major_vessels of patients with probablity of having heart disease.
 
@@ -148,6 +149,22 @@ summary(model)
 # sex
 # thalach
 
+
+
+anova(model, test="Chisq")
+
+# The difference between the null deviance and the residual deviance shows how our model is
+# doing against the null model (a model with only the intercept). The wider this gap, the better. 
+# Analyzing the table we can see the drop in deviance when adding each variable one at a time.
+model2<-glm(heart_disease_present ~exercise_induced_angina+chest_pain_type+num_major_vessels+oldpeak_eq_st_depression+sex+thalach+resting_blood_pressure+slope_of_peak_exercise_st_segment+fasting_blood_sugar_gt_120_mg_per_dl,family = binomial(link = 'logit'), data=train)
+summary(model2)
+anova(model2, test="Chisq")
+# Again, adding resting_blood_pressure, slope_of_peak_exercise_st_segment, fasting_blood_sugar_gt_120_mg_per_dl  does not affect the residual deviance drop to any extend. 
+# Look for the other variables  that seems to improve the model less even though low p value is okay. 
+# A large p-value here indicates that the model without the variable explains more or less the same amount of variation.
+
+# Ultimately what you would like to see is a significant drop in deviance and the AIC.
+
 #not include / reject from model
 # resting_blood_pressure
 # slope_of_peak_exercise_st_segment
@@ -156,6 +173,12 @@ summary(model)
 # serum_cholesterol_mg_per_dl
 # max_heart_rate_achieved
 # resting_ekg_results
+
+#the McFadden R2 index can be used to assess the model fit 
+#Need to find a way to interpret this......pending
+install.packages("pscl")
+library(pscl)
+pR2(model)
 
 # to get odds ratio
 require(MASS)
@@ -176,3 +199,13 @@ exp(coef(model)) # exponentiated coefficients
 exp(confint(model)) # 95% CI for exponentiated coefficients
 predict(model, type="response") # predicted values
 residuals(model, type="deviance") # residuals
+
+
+# how well this model predicts
+#***************************************
+model<-glm(heart_disease_present ~exercise_induced_angina+chest_pain_type+num_major_vessels+oldpeak_eq_st_depression+sex,family = binomial(link = 'logit'), data=train)
+summary(model)
+# fitted.results <- predict(model,newdata=subset(d3,select=c(...columns...)),type='response')
+# fitted.results <- ifelse(fitted.results > 0.5,1,0)
+# misClasificError <- mean(fitted.results != test$Survived)
+# print(paste('Accuracy',1-misClasificError))
