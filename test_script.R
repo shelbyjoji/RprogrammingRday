@@ -57,7 +57,7 @@ summary(train)
 
 
 #************************************************************************************************************
-#Exploratory Analysis
+#Exploratory Analysis    PENDING
 #------------------------------------------------------------------------------------------------------------
 library(ggplot2)
 
@@ -114,12 +114,61 @@ missmap(train, main="Missing values vs observed")
 
 
 #********************************************************************************************
-#Model fitting    DONE
+#Model fitting    PENDING
 #********************************************************************************************
+
+#Logistic regression
+# - dependent variable is dichotomous 
+# - explain relationship between response variable and one or more categorical(nominal), categorical(ordinal), interval or retio-level indpendent variables
+
+#ASSUMPTIONS
+# - Response varibale is dichotomous
+# - No outliers in the data
+# - There should be no multicolinearity (high correlation) among predictors .  Do a correlation matrix
+#   This assuption is metv as long as correlation coefficents are less than 0.90
+
 train <- subset( train, select = -patient_id )
 
-model<-glm(heart_disease_present ~., family = binomial(link = 'logit'), data=train)
+train$thalach[train$thal == "normal"] <- 0   
+train$thalach[train$thal == "fixed_defect"] <- 1
+train$thalach[train$thal == "reversible_defect"] <- 2
+
+names(train)
+model<-glm(heart_disease_present ~exercise_induced_angina+chest_pain_type+num_major_vessels+oldpeak_eq_st_depression+sex+thalach,family = binomial(link = 'logit'), data=train)
 summary(model)
+
+#for all the above statistically significant variables, num_major_vessels has the lowest p-value suggesting 
+#a strong association of the num_major_vessels of patients with probablity of having heart disease.
+
+# included in the model
+# exercise_induced_angina
+# chest_pain_type
+# num_major_vessels
+# oldpeak_eq_st_depression
+# sex
+# thalach
+
+#not include / reject from model
+# resting_blood_pressure
+# slope_of_peak_exercise_st_segment
+# fasting_blood_sugar_gt_120_mg_per_dl
+# age
+# serum_cholesterol_mg_per_dl
+# max_heart_rate_achieved
+# resting_ekg_results
+
+# to get odds ratio
+require(MASS)
+exp(cbind(Odd_Ratio = coef(model), confint(model)))
+
+logit2prob <- function(x){
+  odds <- exp(x)
+  prob <- odds / (1 + odds)
+  return(prob)
+}
+
+# to get probablity
+logit2prob(coef(model))
 
 
 confint(model)
