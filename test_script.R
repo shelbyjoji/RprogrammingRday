@@ -41,14 +41,14 @@ summary(train)
         #-- Value 1: upsloping 
         #-- Value 2: flat 
         #-- Value 3: downsloping
-
+#exercise_induced_angina (1 = yes; 0 = no)
 #_______________________________
 #Continuous numeric variables
 #_______________________________
 
 #serum_cholesterol_mg_per_dl (126 to 564) 
 #oldpeak_eq_st_depression (ST depression induced by exercise relative to rest )
-#exercise_induced_angina (1 = yes; 0 = no)
+
 #max_heart_rate_achieved
 #Rest_BP 
 #Age
@@ -59,23 +59,27 @@ summary(train)
 #************************************************************************************************************
 #Exploratory Analysis    PENDING
 #------------------------------------------------------------------------------------------------------------
+install.packages("magrittr")
 library(ggplot2)
-
+library(magrittr)
 # Custom Binning. I can just give the size of the bin
-ggplot(train, aes(x=age)) + geom_histogram(binwidth = 5,color="white", fill=rgb(0.2,0.7,0.1,0.4) )
-ggplot(train, aes(x=age)) + geom_histogram(binwidth = 5,aes(fill = ..count..)  )
+
+train%>% ggplot(aes(x=age)) + geom_histogram(binwidth = 5,color="white", fill=rgb(0.2,0.7,0.1,0.4) )
+train%>% ggplot(aes(x=age)) + geom_histogram(binwidth = 5,aes(fill = ..count..)  )
 
 # Age (continuous numeric variable) vs heart disease(binary)
-ggplot(train, aes(age, fill = factor(heart_disease_present))) + 
+train%>%
+ggplot(aes(age, fill = factor(heart_disease_present))) + 
   geom_histogram(bins=30) + 
-  xlab("Age") +theme_few() + scale_colour_few()+
+  xlab("Age") +
   scale_fill_discrete(name = "Presence_of_Heart_disease") + 
   ggtitle("Age vs Heart disease")
 
 
 
 #Sex(nominal qualitative variable) vs vs heart disease(binary)
-ggplot(train, aes(sex, fill = factor(heart_disease_present))) + 
+train%>%
+ggplot(aes(sex, fill = factor(heart_disease_present))) + 
   geom_bar(stat = "Count", position = 'dodge')+
   xlab("Sex") +
   ylab("Count") +
@@ -91,13 +95,42 @@ ggplot(train, aes(age, fill = factor(heart_disease_present))) +
   scale_fill_discrete(name = "heart_disease_present") + 
   ggtitle("Age vs Sex vs Heart disease")
 
-#SystolicBP vs Heart disease
+#SystolicBP(resting) vs Heart disease
 ggplot(train, aes(resting_blood_pressure, fill = factor(heart_disease_present))) + 
   geom_histogram(bins=20) + 
   xlab("Resting_BP")+ 
   scale_fill_discrete(name = "Presence_of_Heart_disease") + 
   ggtitle("Resting_BP vs Heart disease")
 
+#num_major_vessels(nominal qualitative variable) vs vs heart disease(binary)
+train%>%
+  ggplot(aes(num_major_vessels, fill = factor(heart_disease_present))) + 
+  geom_bar(stat = "Count", position = 'dodge')+
+  xlab("Major vessels") +
+  ylab("Count") +
+  scale_fill_discrete(name = "Presence_of_Heart_disease") + 
+  ggtitle("Major vessels vs Heart disease")
+
+#Thalium stress test result(nominal qualitative variable) vs vs heart disease(binary)
+train%>%
+  ggplot(aes(thal, fill = factor(heart_disease_present))) + 
+  geom_bar(stat = "Count", position = 'dodge')+
+  xlab("Thalium stress test") +
+  ylab("Count") +
+  scale_fill_discrete(name = "Presence_of_Heart_disease") + 
+  ggtitle("Thalium stress test result vs Heart disease")
+
+
+train%>%
+  ggplot(aes(oldpeak_eq_st_depression, fill = factor(heart_disease_present))) + 
+  geom_histogram(bins=30) + 
+  xlab("Oldpeak ST depression") +
+  scale_fill_discrete(name = "Presence_of_Heart_disease") + 
+  ggtitle("Oldpeak ST depression vs Heart disease")
+
+summary(train$oldpeak_eq_st_depression)
+View(train)
+names(train)
 #... more exploratory analysis required
 
 
@@ -127,14 +160,38 @@ missmap(train, main="Missing values vs observed")
 # - There should be no multicolinearity (high correlation) among predictors .  Do a correlation matrix
 #   This assuption is metv as long as correlation coefficents are less than 0.90
 
+
+#**************************************************************
+#CORRELATION MATRIX
+train2 <- subset( train, select = c('exercise_induced_angina','chest_pain_type','num_major_vessels','oldpeak_eq_st_depression','sex'))
+train3<-subset( train, select = c('exercise_induced_angina','chest_pain_type','num_major_vessels','oldpeak_eq_st_depression','sex','heart_disease_present'))
+
+
+install.packages("corrplot")
+names(train)
+train4<-subset(train, select = c('serum_cholesterol_mg_per_dl','oldpeak_eq_st_depression','max_heart_rate_achieved','resting_blood_pressure','age'))
+library(corrplot)
+M <- cor(train4, method = c("pearson"))
+
+corrplot(M, type = "upper", tl.pos = "td",
+         method = "circle", tl.cex = 0.75, tl.col = 'black',
+         order = "hclust", diag = FALSE)
+
+
+
+#***********************************************************
+
+
 train <- subset( train, select = -patient_id )
 
 train$thalach[train$thal == "normal"] <- 0   
 train$thalach[train$thal == "fixed_defect"] <- 1
 train$thalach[train$thal == "reversible_defect"] <- 2
 
+library(broom)
 names(train)
 model<-glm(heart_disease_present ~exercise_induced_angina+chest_pain_type+num_major_vessels+oldpeak_eq_st_depression+sex+thalach,family = binomial(link = 'logit'), data=train)
+tidy(model)
 summary(model)
 
 
@@ -157,6 +214,7 @@ anova(model, test="Chisq")
 # doing against the null model (a model with only the intercept). The wider this gap, the better. 
 # Analyzing the table we can see the drop in deviance when adding each variable one at a time.
 model2<-glm(heart_disease_present ~exercise_induced_angina+chest_pain_type+num_major_vessels+oldpeak_eq_st_depression+sex+thalach+resting_blood_pressure+slope_of_peak_exercise_st_segment+fasting_blood_sugar_gt_120_mg_per_dl,family = binomial(link = 'logit'), data=train)
+
 summary(model2)
 anova(model2, test="Chisq")
 # Again, adding resting_blood_pressure, slope_of_peak_exercise_st_segment, fasting_blood_sugar_gt_120_mg_per_dl  does not affect the residual deviance drop to any extend. 
