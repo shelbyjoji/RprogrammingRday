@@ -182,7 +182,6 @@ corrplot(M, type = "upper", tl.pos = "td",
 #***********************************************************
 
 
-train <- subset( train, select = -patient_id )
 
 train$thalach[train$thal == "normal"] <- 0   
 train$thalach[train$thal == "fixed_defect"] <- 1
@@ -190,10 +189,11 @@ train$thalach[train$thal == "reversible_defect"] <- 2
 
 library(broom)
 names(train)
-model<-glm(heart_disease_present ~exercise_induced_angina+chest_pain_type+num_major_vessels+oldpeak_eq_st_depression+sex+thalach,family = binomial(link = 'logit'), data=train)
+
+model<-glm(heart_disease_present ~slope_of_peak_exercise_st_segment+thal+resting_blood_pressure+chest_pain_type+num_major_vessels+fasting_blood_sugar_gt_120_mg_per_dl+resting_ekg_results+serum_cholesterol_mg_per_dl+oldpeak_eq_st_depression+sex+age+max_heart_rate_achieved+exercise_induced_angina+thalach,family = binomial(link = 'logit'), data=train)
 tidy(model)
 summary(model)
-
+backwards = step(model)
 
 #for all the above statistically significant variables, num_major_vessels has the lowest p-value suggesting 
 #a strong association of the num_major_vessels of patients with probablity of having heart disease.

@@ -1,0 +1,236 @@
+---
+title: "My Project"
+author: "Shelby Joji"
+date: "November 1, 2018"
+output: html_document
+---
+
+## R Markdown
+
+The aim of this project is to develop a model that predicts the binary outcome: what factors predicts the presence of heart disease(CAD)?'
+
+Source: https://www.drivendata.org/competitions/54/machine-learning-with-a-heart/page/109/
+
+Project contains two datasets -  train and test. d1 contains all possible regressors for each unique patient ID. d2 contains outcome of all patient in d1.
+We created train dataset by merging outcome(d2) with possible regressors(d1). Model is trained using train dataset. d3 is final test dataset to predict the outcome. Once we have merged, we do not need patient_id, which is the primary key for the dataset, as this is not a regressor or variable id
+
+
+```{r}
+library(readr)
+d1 <- read_csv("train_values.csv")
+d2 <- read_csv("train_labels.csv")
+d3 <- read_csv("test_values.csv")
+View(d1)
+View(d2)
+
+train<- total <- merge(d1,d2,by="patient_id")
+train <- subset( train, select = -patient_id )
+
+View(train)
+#check data
+str(train)
+summary(train)
+```
+
+OBJECTIVE
+Predict whether patient have heart disease (CAD) or not
+
+
+_______________________________
+Categorical variables
+_______________________________
+
+*Sex -  0 Female or  1 Male
+
+thal - variable is character type
+
+  This shows how well blood flows into your heart while exercising or at rest. Results of thallium stress test measuring blood flow to the heart, with possible 
+        Possible values: normal, fixed_defect, reversible_defect
+thal changed to thalach
+
+*thalach
+Since variable is of character type, we change it to 
+          #-- Value 0: normal
+          #-- Value 1: abnormal
+
+```{r}
+train$thalach[train$thal == "normal"] <- 0   
+train$thalach[train$thal == "fixed_defect"] <- 1
+train$thalach[train$thal == "reversible_defect"] <- 1
+View(train)
+train <- subset( train, select = -thal )
+
+```
+
+
+*chest_pain_type
+        #-- Value 1: typical angina 
+        #-- Value 2: atypical angina 
+        #-- Value 3: non-anginal pain (if its duration is over 30 minutes or less than 5 seconds) 
+        #-- Value 4: asymptomatic 
+
+ 
+*resting_ekg_results
+        #-- Value 0: normal 
+        #-- Value 1: having ST-T wave abnormality (T wave inversions and/or ST elevation or depression of > 0.05 mV) 
+        #-- Value 2: showing probable or definite left ventricular hypertrophy by Estes' criteria 
+
+*slope_of_peak_exercise_st_segment 
+        #-- Value 1: upsloping (does not signify anything)
+        #-- Value 2: flat 
+        #-- Value 3: downsloping (severe myocardial ischemia)
+        
+*exercise_induced_angina (1 = yes; 0 = no)
+
+_______________________________
+Continuous numeric variables
+_______________________________
+
+*serum_cholesterol_mg_per_dl - 126 (min) to 564(max) 
+
+*oldpeak_eq_st_depression (ST depression induced by exercise relative to rest )
+    - 0.00 (min)
+    - 6.20 (max)
+
+*max_heart_rate_achieved
+    - 96 (min)
+    - 202(max)
+
+*Rest_BP - This should probably be systolic
+    - 94 (min)
+    - 180 (max)
+*Age
+    - 29 (min)
+    - 77 (max)
+
+
+_____________________________________
+BINARY DEPENDENT variable
+_____________________________________
+
+*heart_disease_present - what we are trying to predict
+    - 0 represents no heart disease present
+    - 1 represents heart disease present
+    
+
+
+
+____________________________________________
+EXPLORATORY ANALYSIS   PENDING
+____________________________________________
+
+____________________________________________
+CHECK FOR MISSING VALUES      DONE
+____________________________________________
+
+Following code will generate a map for missing values. We use Amelia package for performing this analysis.
+
+```{r}
+library(Amelia)
+sapply(train, function(x) sum(is.na(x)))
+
+sapply(train, function(x) length(unique(x)))#unique values for all columns in dataset
+
+
+missmap(train, main="Missing values vs observed")
+```
+______________________________________________
+MODELING    PENDING
+______________________________________________
+
+We perform logistic regression due to the nature of binary dependent variable
+
+Logistic regression
+   - dependent variable is dichotomous 
+   - explain relationship between response variable and one or more categorical(nominal), categorical(ordinal), interval or retio-level indpendent variables
+
+
+ASSUMPTIONS
+   - Response varibale is dichotomous  *MET*
+   - No outliers in the data *MET*
+   - There should be no multicolinearity (high correlation) among predictors .  Do a correlation matrix *TO BE CHECKED* This assuption is met as long as correlation coefficents are less than 0.90
+
+
+```{r}
+library(broom)
+
+fullmodel<-glm(heart_disease_present ~ slope_of_peak_exercise_st_segment+thalach+resting_blood_pressure+chest_pain_type+num_major_vessels+fasting_blood_sugar_gt_120_mg_per_dl+resting_ekg_results+serum_cholesterol_mg_per_dl+oldpeak_eq_st_depression+sex+age+max_heart_rate_achieved+exercise_induced_angina+thalach,family = binomial(link = 'logit'), data=train)
+
+tidy(fullmodel)
+summary(fullmodel)
+
+
+# to get odds ratio
+require(MASS)
+exp(cbind(Odd_Ratio = coef(fullmodel), confint(fullmodel)))
+
+# create function to get probablity
+logit2prob <- function(x){
+  odds <- exp(x)
+  prob <- odds / (1 + odds)
+  return(prob)
+}
+
+# to get probablity
+logit2prob(coef(fullmodel))
+
+#confidence intervals
+confint(fullmodel) # profile confidence intervals
+confint.default(fullmodel)#Wald or Model-Based Confidence Intervals
+
+exp(coef(fullmodel)) # exponentiated coefficients
+exp(confint(fullmodel)) # 95% CI for exponentiated coefficients
+predict(fullmodel, type="response") # predicted values
+residuals(fullmodel, type="deviance") # residuals
+
+#get odds ratio statistics
+toOR <- function(object, ...) {
+coef <- object$coef
+se <- sqrt(diag(vcov(object)))
+zscore <- coef / se
+or <- exp(coef)
+delta <- or * se
+pvalue <- 2*pnorm(abs(zscore),lower.tail=FALSE)
+loci <- coef - qnorm(.975) * se
+upci <- coef + qnorm(.975) * se
+ortab <- data.frame(or, delta, zscore, pvalue,
+exp(loci), exp(upci))
+round(ortab, 4)
+}
+
+#confidence interval shown is model based
+toOR(fullmodel)
+
+
+
+nothing <- glm(heart_disease_present ~ 1,family=binomial(link = 'logit'), data=train)
+summary(nothing)
+
+#backward regression
+backwards = step(fullmodel) # Backwards selection is the default
+summary(backwards)
+formula(backwards)
+back2<- glm(heart_disease_present ~ thalach + chest_pain_type + num_major_vessels  + oldpeak_eq_st_depression+ exercise_induced_angina,family=binomial(link = 'logit'), data=train)
+summary(back2)
+
+#forward regression
+forwards = step(nothing,
+scope=list(lower=formula(nothing),upper=formula(fullmodel)), direction="forward")
+summary(forwards)
+
+
+
+ bothways = step(nothing, list(lower=formula(nothing),upper=formula(fullmodel)),
+direction="both",trace=0)
+ summary(bothways)
+
+
+formula(forwards)
+
+formula(bothways)
+  
+both2<-glm(heart_disease_present ~ thalach + chest_pain_type + num_major_vessels  + oldpeak_eq_st_depression+ exercise_induced_angina,family=binomial(link = 'logit'), data=train)
+
+summary(back2)
+```
+
