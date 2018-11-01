@@ -118,6 +118,81 @@ _____________________________________
 ____________________________________________
 EXPLORATORY ANALYSIS   PENDING
 ____________________________________________
+```{r}
+install.packages("magrittr")
+library(ggplot2)
+library(magrittr)
+# Custom Binning. I can just give the size of the bin
+
+train%>% ggplot(aes(x=age)) + geom_histogram(binwidth = 5,color="white", fill=rgb(0.2,0.7,0.1,0.4) )
+train%>% ggplot(aes(x=age)) + geom_histogram(binwidth = 5,aes(fill = ..count..)  )
+
+# Age (continuous numeric variable) vs heart disease(binary)
+train%>%
+ggplot(aes(age, fill = factor(heart_disease_present))) + 
+  geom_histogram(bins=30) + 
+  xlab("Age") +
+  scale_fill_discrete(name = "Presence_of_Heart_disease") + 
+  ggtitle("Age vs Heart disease")
+
+
+
+#Sex(nominal qualitative variable) vs vs heart disease(binary)
+train%>%
+ggplot(aes(sex, fill = factor(heart_disease_present))) + 
+  geom_bar(stat = "Count", position = 'dodge')+
+  xlab("Sex") +
+  ylab("Count") +
+  scale_fill_discrete(name = "Presence_of_Heart_disease") + 
+  ggtitle("Sex vs Heart disease")
+
+#Sex vs heart disease vs Age 
+ggplot(train, aes(age, fill = factor(heart_disease_present))) + 
+  geom_histogram(bins=30) + 
+  xlab("Age") +
+  ylab("Count") +
+  facet_grid(.~sex)+
+  scale_fill_discrete(name = "heart_disease_present") + 
+  ggtitle("Age vs Sex vs Heart disease")
+
+#SystolicBP(resting) vs Heart disease
+ggplot(train, aes(resting_blood_pressure, fill = factor(heart_disease_present))) + 
+  geom_histogram(bins=20) + 
+  xlab("Resting_BP")+ 
+  scale_fill_discrete(name = "Presence_of_Heart_disease") + 
+  ggtitle("Resting_BP vs Heart disease")
+
+#num_major_vessels(nominal qualitative variable) vs vs heart disease(binary)
+train%>%
+  ggplot(aes(num_major_vessels, fill = factor(heart_disease_present))) + 
+  geom_bar(stat = "Count", position = 'dodge')+
+  xlab("Major vessels") +
+  ylab("Count") +
+  scale_fill_discrete(name = "Presence_of_Heart_disease") + 
+  ggtitle("Major vessels vs Heart disease")
+
+#Thalium stress test result(nominal qualitative variable) vs vs heart disease(binary)
+train%>%
+  ggplot(aes(thal, fill = factor(heart_disease_present))) + 
+  geom_bar(stat = "Count", position = 'dodge')+
+  xlab("Thalium stress test") +
+  ylab("Count") +
+  scale_fill_discrete(name = "Presence_of_Heart_disease") + 
+  ggtitle("Thalium stress test result vs Heart disease")
+
+
+train%>%
+  ggplot(aes(oldpeak_eq_st_depression, fill = factor(heart_disease_present))) + 
+  geom_histogram(bins=30) + 
+  xlab("Oldpeak ST depression") +
+  scale_fill_discrete(name = "Presence_of_Heart_disease") + 
+  ggtitle("Oldpeak ST depression vs Heart disease")
+
+summary(train$oldpeak_eq_st_depression)
+View(train)
+names(train)
+#... more exploratory analysis required
+```
 
 ____________________________________________
 CHECK FOR MISSING VALUES      DONE
