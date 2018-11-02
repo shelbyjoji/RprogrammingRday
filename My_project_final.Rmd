@@ -309,5 +309,24 @@ both2<-glm(heart_disease_present ~ factor(thalach) + factor(chest_pain_type) + f
 summary(both2)
 anova(both2, test="Chisq")
 
+#the McFadden R2 index can be used to assess the model fit
+library(pscl)
+pR2(both2)
+
+#ROC curve
+train2<-train
+library(pROC)
+
+prob=predict(both2,type=c("response"))
+train2$prob=prob
+g <- roc(heart_disease_present ~ prob, data = train2)
+plot(g, col=rainbow(7), main="ROC curve", xlab="Specificity", 
+     ylab="Sensitivity")    
+
+
+cm<-table(prob > 0.5,train2$heart_disease_present)
+
+confusion_matrix <- as.data.frame(cm)
+
 ```
 
