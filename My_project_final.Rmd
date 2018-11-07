@@ -230,10 +230,9 @@ ASSUMPTIONS
 
 ```{r}
 
-fullmodel<-glm(heart_disease_present ~ slope_of_peak_exercise_st_segment+thalach+resting_blood_pressure+chest_pain_type+num_major_vessels+fasting_blood_sugar_gt_120_mg_per_dl+resting_ekg_results+serum_cholesterol_mg_per_dl+oldpeak_eq_st_depression+sex+age+max_heart_rate_achieved+exercise_induced_angina+thalach,family = binomial(link = 'logit'), data=train)
+fullmodel<-glm(heart_disease_present ~ slope_of_peak_exercise_st_segment+factor(thalach)+resting_blood_pressure+factor(chest_pain_type)+factor(num_major_vessels)+fasting_blood_sugar_gt_120_mg_per_dl+factor(resting_ekg_results)+serum_cholesterol_mg_per_dl+oldpeak_eq_st_depression+factor(sex)+age+max_heart_rate_achieved+factor(exercise_induced_angina),family = binomial(link = 'logit'), data=train)
 
 summary(fullmodel)
-
 
 
 #get odds ratio statistics
@@ -261,37 +260,45 @@ summary(nothing)
 #backward regression
 backwards = step(fullmodel) # Backwards selection is the default
 formula(backwards)
-back2<- glm(heart_disease_present ~ thalach + chest_pain_type + num_major_vessels  + oldpeak_eq_st_depression+ exercise_induced_angina,family=binomial(link = 'logit'), data=train)
+back2<- glm(heart_disease_present ~ factor(thalach) + factor(chest_pain_type) + 
+    factor(num_major_vessels) + oldpeak_eq_st_depression + factor(sex) + 
+    factor(exercise_induced_angina),family=binomial(link = 'logit'), data=train)
 summary(back2)
+library(DescTools)
+PseudoR2(back2, c("McFadden", "Nagel","CoxSnell"))
 
 #forward regression
 forwards = step(nothing,
 scope=list(lower=formula(nothing),upper=formula(fullmodel)), direction="forward")
-
+library(DescTools)
+PseudoR2(forwards, c("McFadden", "Nagel","CoxSnell"))
 #stepwise
 bothways = step(nothing, list(lower=formula(nothing),upper=formula(fullmodel)),
 direction="both",trace=0)
 formula(bothways)
+summary(bothways)
 both2<-glm(heart_disease_present ~ factor(thalach) + factor(chest_pain_type) + factor(num_major_vessels)  + oldpeak_eq_st_depression+ factor(exercise_induced_angina),family=binomial(link = 'logit'), data=train)
 summary(both2)
 
 
 
-#checking interaction
-library(effects)
-M1<-(glm(heart_disease_present ~ exercise_induced_angina*oldpeak_eq_st_depression, family=binomial(link = 'logit'), data=train))
-plot(allEffects(M1))
-plot(predictorEffects(M1))
+
 formula(both2)
+
+
 
 ```
 
 ```{r}
-final<-(glm(heart_disease_present ~ factor(num_major_vessels)+ factor(thalach)+ factor(chest_pain_type)+factor(exercise_induced_angina)*oldpeak_eq_st_depression, family=binomial(link = 'logit'), data=train))
+final<-(glm(heart_disease_present ~ factor(num_major_vessels)+ factor(thalach)+ factor(chest_pain_type)+factor(sex)+factor(exercise_induced_angina)*oldpeak_eq_st_depression, family=binomial(link = 'logit'), data=train))
 
 summary(final)
 
-
+library(DescTools)
+PseudoR2(final, c("McFadden", "Nagel","CoxSnell"))
+PseudoR2(back2, c("McFadden", "Nagel","CoxSnell"))
+PseudoR2(forwards, c("McFadden", "Nagel","CoxSnell"))
+PseudoR2(backwards, c("McFadden", "Nagel","CoxSnell"))
 
 # to get odds ratio
 require(MASS)
@@ -326,9 +333,7 @@ vif(final)
 #anova on the model
 anova(final, test="Chisq")
 
-#the McFadden R2 index can be used to assess the model fit
-library(pscl)
-pR2(final)
+
 
 #ROC curve
 train2<-train
