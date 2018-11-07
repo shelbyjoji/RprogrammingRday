@@ -60,6 +60,8 @@ train$thalach[train$thal == "reversible_defect"] <- 1
 View(train)
 train <- subset( train, select = -thal )
 
+
+
 ```
 
 
@@ -210,7 +212,7 @@ sapply(train, function(x) length(unique(x)))#unique values for all columns in da
 missmap(train, main="Missing values vs observed")
 ```
 ______________________________________________
-MODELING    PENDING
+MODELING    DONE
 ______________________________________________
 
 We perform logistic regression due to the nature of binary dependent variable
@@ -227,36 +229,12 @@ ASSUMPTIONS
 
 
 ```{r}
-library(broom)
 
 fullmodel<-glm(heart_disease_present ~ slope_of_peak_exercise_st_segment+thalach+resting_blood_pressure+chest_pain_type+num_major_vessels+fasting_blood_sugar_gt_120_mg_per_dl+resting_ekg_results+serum_cholesterol_mg_per_dl+oldpeak_eq_st_depression+sex+age+max_heart_rate_achieved+exercise_induced_angina+thalach,family = binomial(link = 'logit'), data=train)
 
-tidy(fullmodel)
 summary(fullmodel)
 
 
-# to get odds ratio
-require(MASS)
-exp(cbind(Odd_Ratio = coef(fullmodel), confint(fullmodel)))
-
-# create function to get probablity
-logit2prob <- function(x){
-  odds <- exp(x)
-  prob <- odds / (1 + odds)
-  return(prob)
-}
-
-# to get probablity
-logit2prob(coef(fullmodel))
-
-#confidence intervals
-confint(fullmodel) # profile confidence intervals
-confint.default(fullmodel)#Wald or Model-Based Confidence Intervals
-
-exp(coef(fullmodel)) # exponentiated coefficients
-exp(confint(fullmodel)) # 95% CI for exponentiated coefficients
-predict(fullmodel, type="response") # predicted values
-residuals(fullmodel, type="deviance") # residuals
 
 #get odds ratio statistics
 toOR <- function(object, ...) {
@@ -273,8 +251,7 @@ exp(loci), exp(upci))
 round(ortab, 4)
 }
 
-#confidence interval shown is model based
-toOR(fullmodel)
+
 
 
 
@@ -283,7 +260,6 @@ summary(nothing)
 
 #backward regression
 backwards = step(fullmodel) # Backwards selection is the default
-summary(backwards)
 formula(backwards)
 back2<- glm(heart_disease_present ~ thalach + chest_pain_type + num_major_vessels  + oldpeak_eq_st_depression+ exercise_induced_angina,family=binomial(link = 'logit'), data=train)
 summary(back2)
@@ -291,42 +267,145 @@ summary(back2)
 #forward regression
 forwards = step(nothing,
 scope=list(lower=formula(nothing),upper=formula(fullmodel)), direction="forward")
-summary(forwards)
 
-
-
- bothways = step(nothing, list(lower=formula(nothing),upper=formula(fullmodel)),
+#stepwise
+bothways = step(nothing, list(lower=formula(nothing),upper=formula(fullmodel)),
 direction="both",trace=0)
- summary(bothways)
-
-
-formula(forwards)
-
 formula(bothways)
-  
 both2<-glm(heart_disease_present ~ factor(thalach) + factor(chest_pain_type) + factor(num_major_vessels)  + oldpeak_eq_st_depression+ factor(exercise_induced_angina),family=binomial(link = 'logit'), data=train)
-
 summary(both2)
-anova(both2, test="Chisq")
+
+
+
+#checking interaction
+library(effects)
+M1<-(glm(heart_disease_present ~ exercise_induced_angina*oldpeak_eq_st_depression, family=binomial(link = 'logit'), data=train))
+plot(allEffects(M1))
+plot(predictorEffects(M1))
+formula(both2)
+
+```
+
+```{r}
+final<-(glm(heart_disease_present ~ factor(num_major_vessels)+ factor(thalach)+ factor(chest_pain_type)+factor(exercise_induced_angina)*oldpeak_eq_st_depression, family=binomial(link = 'logit'), data=train))
+
+summary(final)
+
+
+
+# to get odds ratio
+require(MASS)
+exp(cbind(Odd_Ratio = coef(final), confint(final)))
+
+# create function to get probablity
+logit2prob <- function(x){
+  odds <- exp(x)
+  prob <- odds / (1 + odds)
+  return(prob)
+}
+
+# to get probablity
+logit2prob(coef(final))
+
+#confidence intervals
+confint(final) # profile confidence intervals
+confint.default(final)#Wald or Model-Based Confidence Intervals
+
+exp(coef(final)) # exponentiated coefficients
+exp(confint(final)) # 95% CI for exponentiated coefficients
+predict(final, type="response") # predicted values
+residuals(final, type="deviance") # residuals
+
+
+#confidence interval shown is model based
+toOR(final)
+
+library(DAAG)
+vif(final)
+
+#anova on the model
+anova(final, test="Chisq")
 
 #the McFadden R2 index can be used to assess the model fit
 library(pscl)
-pR2(both2)
+pR2(final)
 
 #ROC curve
 train2<-train
 library(pROC)
 
-prob=predict(both2,type=c("response"))
+prob=predict(final,type=c("response"))
 train2$prob=prob
 g <- roc(heart_disease_present ~ prob, data = train2)
-plot(g, col=rainbow(7), main="ROC curve", xlab="Specificity", 
+plot(g, col=rainbow(7), main="ROC curve",sub="subtitle", xlab="Specificity", 
      ylab="Sensitivity")    
+auc(g)
 
+#code for confusion matrix
+library(tidyselect)
+library(caret)
+mu <- predict(final, type="response")
+cutoff<-mean(mu)
+prob2<-as.matrix(prob)
+for(i in 1:length(prob2)){
+  if(prob2[i]>cutoff)
+    {prob2[i]=1}
+}
+for(i in 1:length(prob2)){
+  if(prob2[i]<cutoff)
+    {prob2[i]=0}
+}
 
-cm<-table(prob > 0.5,train2$heart_disease_present)
+cm<-confusionMatrix(
+  factor(prob2, levels = 0:1),
+  factor(train2$heart_disease_present, levels = 0:1)
+)
 
-confusion_matrix <- as.data.frame(cm)
+draw_confusion_matrix <- function(cm) {
+  layout(matrix(c(1,1,2)))
+  par(mar=c(2,2,2,2))
+  plot(c(100, 345), c(300, 450), type = "n", xlab="", ylab="", xaxt='n', yaxt='n')
+  title('CONFUSION MATRIX', cex.main=2)
+
+  # create the matrix 
+  rect(150, 430, 240, 370, col='deepskyblue2')
+  text(195, 435, '0', cex=1.2)
+  rect(250, 430, 340, 370, col='chartreuse1')
+  text(295, 435, '1', cex=1.2)
+  text(125, 370, 'Predicted', cex=1.3, srt=90, font=2)
+  text(245, 450, 'Actual', cex=1.3, font=2)
+  rect(150, 305, 240, 365, col='chartreuse1')
+  rect(250, 305, 340, 365, col='deepskyblue2')
+  text(140, 400, '0', cex=1.2, srt=90)
+  text(140, 335, '1', cex=1.2, srt=90)
+
+  # add in the cm results 
+  res <- as.numeric(cm$table)
+  text(195, 400, res[1], cex=1.6, font=2, col='white')
+  text(195, 335, res[2], cex=1.6, font=2, col='white')
+  text(295, 400, res[3], cex=1.6, font=2, col='white')
+  text(295, 335, res[4], cex=1.6, font=2, col='white')
+
+  # add in the specifics 
+  plot(c(100, 0), c(100, 0), type = "n", xlab="", ylab="", main = "DETAILS", xaxt='n', yaxt='n')
+  text(10, 85, names(cm$byClass[1]), cex=1.2, font=2)
+  text(10, 70, round(as.numeric(cm$byClass[1]), 3), cex=1.2)
+  text(30, 85, names(cm$byClass[2]), cex=1.2, font=2)
+  text(30, 70, round(as.numeric(cm$byClass[2]), 3), cex=1.2)
+  text(50, 85, names(cm$byClass[5]), cex=1.2, font=2)
+  text(50, 70, round(as.numeric(cm$byClass[5]), 3), cex=1.2)
+  text(70, 85, names(cm$byClass[6]), cex=1.2, font=2)
+  text(70, 70, round(as.numeric(cm$byClass[6]), 3), cex=1.2)
+  text(90, 85, names(cm$byClass[7]), cex=1.2, font=2)
+  text(90, 70, round(as.numeric(cm$byClass[7]), 3), cex=1.2)
+
+  # add in the accuracy information 
+  text(30, 35, names(cm$overall[1]), cex=1.5, font=2)
+  text(30, 20, round(as.numeric(cm$overall[1]), 3), cex=1.4)
+  text(70, 35, names(cm$overall[2]), cex=1.5, font=2)
+  text(70, 20, round(as.numeric(cm$overall[2]), 3), cex=1.4)
+}
+draw_confusion_matrix(cm) #confusion matrix
 
 ```
 
