@@ -1,5 +1,5 @@
 # RprogrammingRday
-Project for R day Group 6
+Project for R day 
 
 Coronary artery disease (CAD), caused by narrowing of arteries from fat deposits, has been one among the major heart diseases that affect the country. Coronary artery disease may or may not be present with symptoms and, if left untreated, it could lead to life-threatening heart blockages.
 
